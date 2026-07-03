@@ -1,1 +1,7 @@
 /机器学习与项目实践2026_期末作业.pptx
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.DS_Store

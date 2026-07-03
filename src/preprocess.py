@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.decomposition import PCA
 
@@ -14,14 +14,34 @@ class DataPreprocessor:
         df_clean = df.copy()
         # 1. 删除重复样本
         df_clean = df_clean.drop_duplicates()
-        # 2. 填充数值缺失：中位数
+
+        # 2. 数值列字符串->数值，处理'?'、单位、脏符号等
+        for col in df_clean.columns:
+            if col != "Class":
+                df_clean[col] = df_clean[col].astype(str).str.strip()
+                df_clean[col] = df_clean[col].str.replace(r'[^0-9\.\-]+', '', regex=True)
+                df_clean[col] = pd.to_numeric(df_clean[col], errors="coerce")
+
+        # 3. 标签值规范化：去空格、大写、字符噪声替换
+        def normalize_label(label):
+            if pd.isna(label):
+                return label
+            s = str(label).strip().upper()
+            s = s.replace("0", "O").replace("3", "E")
+            return s
+
+        df_clean["Class"] = df_clean["Class"].apply(normalize_label)
+
+        # 4. 填充数值缺失：中位数
         num_cols = df_clean.select_dtypes(include=[np.number]).columns
         for col in num_cols:
             med = df_clean[col].median()
             df_clean[col] = df_clean[col].fillna(med)
-        # 3. 类别缺失填充众数
+
+        # 5. 类别缺失填充众数
         df_clean["Class"] = df_clean["Class"].fillna(df_clean["Class"].mode()[0])
-        # 4. 3σ剔除极端异常值
+
+        # 6. 3σ剔除极端异常值
         for col in num_cols:
             mean = df_clean[col].mean()
             std = df_clean[col].std()
@@ -33,11 +53,17 @@ class DataPreprocessor:
     def feature_engineering(self, train_df, val_df, test_df):
         # 分离特征和标签
         X_train_raw = train_df.drop("Class", axis=1)
-        y_train = train_df["Class"]
+        y_train = train_df["Class"].astype(str)
         X_val_raw = val_df.drop("Class", axis=1)
-        y_val = val_df["Class"]
+        y_val = val_df["Class"].astype(str)
         X_test_raw = test_df.drop("Class", axis=1)
-        y_test = test_df["Class"]
+        y_test = test_df["Class"].astype(str)
+
+        # 标签编码
+        self.label_encoder = LabelEncoder()
+        y_train = self.label_encoder.fit_transform(y_train)
+        y_val = self.label_encoder.transform(y_val)
+        y_test = self.label_encoder.transform(y_test)
 
         # 1. 低方差特征过滤
         X_train_var = self.var_selector.fit_transform(X_train_raw)

@@ -6,7 +6,10 @@ plt.rcParams["font.sans-serif"] = ["SimHei"]
 plt.rcParams["axes.unicode_minus"] = False
 
 class Evaluator:
-    def __init__(self, save_dir="../output"):
+    def __init__(self, save_dir=None):
+        if save_dir is None:
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            save_dir = os.path.join(project_root, "output")
         self.save_dir = save_dir
         os.makedirs(save_dir, exist_ok=True)
         self.result_table = []

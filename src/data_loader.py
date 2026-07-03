@@ -21,10 +21,10 @@ class DataLoader:
 
     # 修正缩进，方法放到类内部、__init__外面
     def load_all_data(self):
-        # 读取脏数据集
-        self.df_train = pd.read_csv(self.train_path)
-        self.df_val = pd.read_csv(self.val_path)
-        self.df_test = pd.read_csv(self.test_path)
+        # 读取脏数据集，标记“?”为缺失值
+        self.df_train = pd.read_csv(self.train_path, na_values=["?"])
+        self.df_val = pd.read_csv(self.val_path, na_values=["?"])
+        self.df_test = pd.read_csv(self.test_path, na_values=["?"])
         self.all_df = pd.concat([self.df_train, self.df_val, self.df_test], ignore_index=True)
         print("=== 数据集基础信息 ===")
         print(f"训练集样本：{self.df_train.shape}")
