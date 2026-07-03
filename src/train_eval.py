@@ -14,7 +14,7 @@ class Evaluator:
         os.makedirs(save_dir, exist_ok=True)
         self.result_table = []
 
-    def run_full_eval(self, trained_models, train_data, val_data, test_data, preprocessor):
+    def run_full_eval(self, trained_models, train_data, val_data, test_data, preprocessor, training_histories=None):
         X_train, y_train = train_data
         X_val, y_val = val_data
         X_test, y_test = test_data
@@ -86,6 +86,26 @@ class Evaluator:
         plt.close()
         print(f"\n全部评估图表、结果表格已保存至 {self.save_dir}")
 
+        # 绘制训练损失曲线（若提供训练历史）
+        if training_histories:
+            # 仅绘制有数据的模型
+            plt.figure(figsize=(8,6))
+            plotted = False
+            for name, hist in training_histories.items():
+                if hist:
+                    plt.plot(range(1, len(hist)+1), hist, marker='o', label=name)
+                    plotted = True
+            if plotted:
+                plt.xlabel('Epoch')
+                plt.ylabel('Log Loss')
+                plt.title('训练损失曲线')
+                plt.legend()
+                plt.grid(alpha=0.3)
+                plt.tight_layout()
+                plt.savefig(f"{self.save_dir}/loss_curves.png", dpi=300)
+                plt.close()
+                print(f"训练损失曲线已保存至 {self.save_dir}/loss_curves.png")
+
     def eval_model(self, model_info, X, y, noise_std=0):
         model = model_info["model"]
         if noise_std > 0:
@@ -96,7 +116,12 @@ class Evaluator:
         acc = np.mean(pred == y)
         # 推理耗时
         import time
-        t1 = time.time()
-        model.predict(X[:1000])
-        t_cost = (time.time()-t1)/1000 * 1000
+        repeat = 5
+        n_samples = min(1000, X.shape[0])
+        t_sum = 0.0
+        for _ in range(repeat):
+            t1 = time.time()
+            model.predict(X[:n_samples])
+            t_sum += time.time() - t1
+        t_cost = (t_sum / repeat) / n_samples * 1000
         return {"accuracy": acc, "infer_ms_per_sample": t_cost}
